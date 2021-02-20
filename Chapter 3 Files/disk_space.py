@@ -21,7 +21,9 @@ usage = shutil.disk_usage("/")
 free_space = formatSize(usage[2])
 print(free_space)
 fs = free_space.strip("G")
-seventyfive = float(fs)*0.75
-days = seventyfive / 7.5
-print('%.1f'%seventyfive + "G")
+#seventyfive = float(fs)*0.75
+#days = seventyfive / 7.5
+# 75% of the available diskspace, divided by 7.5G per day allowance = free_space /10
+#print('%.1f'%seventyfive + "G")
+days = float(fs) / 10
 print('%.0f'%days + " Days")
