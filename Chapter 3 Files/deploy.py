@@ -1,132 +1,84 @@
-installdocker
-initdockerswarm
-populatecerts
-generatepasswords
-customlogstashconf
-populatelogstashconfig
-configuredocker
-deploylme
-setpasswords
-configelasticsearch
-zipfiles
+# installdocker
+# initdockerswarm
+# populatecerts
+# generatepasswords
+# customlogstashconf
+# populatelogstashconfig
+# configuredocker
+# deploylme
+# setpasswords
+# configelasticsearch
+# zipfiles
 
-function install(){
-echo -e "\e[32m[x]\e[0m Installing prerequisites"
-#install net-tools to allow backwards compatibility
-sudo apt-get install net-tools -y -q
-#move configs
-cp docker-compose-stack.yml docker-compose-stack-live.yml
+import os
+import shutil
 
-#find the IP winlogbeat will use to communicate with the logstash box (on elk)
+def install():
+    if os.path.isfile("docker-compose-stack.yml"):
+        print("OK")
+    else:
+        print("please change directory to Chapter 3 Files and rerun")
+        exit()
 
-#get interface name of default route
-DEFAULT_IF="$(route | grep '^default' | grep -o '[^ ]*$')"
-
-#get ip of the interface
-EXT_IP="$(/sbin/ifconfig $DEFAULT_IF| awk -F ' *|:' '/inet /{print $3}')"
-
-read -e -p "Enter the IP of this linux server: " -i "$EXT_IP" logstaship
-
-read -e -p "Enter the DNS name of this linux server, This needs to be resolvable from the Windows Event Collector: " logstashcn
-echo "[x] Configuring winlogbeat config and certificates to use $logstaship as the IP and $logstashcn as the DNS"
-
-#enable auto updates if ubuntu
-auto_os_updates
-
-read -e -p "This script will use self signed certificates for communication and encryption, Do you want to continue with self signed certificates? ([y]es/[n]o): " -i "y" selfsignedyn
-
-if [ "$selfsignedyn" == "y" ]; then
-#make certs
-generatecerts
+    #move configs
+    if os.path.isfile("docker-compose-stack-live.yml"):
+        os.rename("docker-compose-stack-live.yml","docker-compose-stack-live.yml.bak")
+    else:
+        shutil.copy("docker-compose-stack.yml","docker-compose-stack-live.yml")
 
 
+    #find the IP and Server DNS name
+    S_IP = input("enter IP address for LME")
+    S_Name = input("enter the DNS name of LME")
 
+    SelfS = input("This script will use self signed certificates for communication and encryption, Do you want to continue with self signed certificates? Y or N")
 
+    if SelfS in ["Y","y","Yes","yes","YES"]:
+        print("OK")
+    else:
+        Certs = input("Please create certificates and put them in the /certs folder. The press Y to continue or N to quit the install")
+        if Certs in ["Y","y","Yes","yes","YES"]:
+            if os.path.isdir("Certs"):
+                print("OK")
+            else:
+                exit()
+        else:
+            exit()
+    data_retention()
 
-elif [ "$selfsignedyn" == "n" ]; then
+def formatSize(bytes):
+    try:
+        bytes = float(bytes)
+        kb = bytes / 1024
+    except:
+        return "Error"
 
-echo "Please make sure you have the following certificates named correctly"
-echo "./certs/root-ca.crt"
-echo "./certs/elasticsearch.key"
-echo "./certs/elasticsearch.crt"
-echo "./certs/logstash.crt"
-echo "./certs/logstash.key"
+    if kb >= 1024:
+        M = kb / 1024
+        if M >= 1024:
+            G = M / 1024
+            return "%.2fG" % (G)
+        else:
+            return "%.2fM" % (M)
+    else:
+        return "%.2fkb" % (kb)
 
-echo "[x] checking for root-ca.crt"
-if [ ! -f ./certs/root-ca.crt ]; then
-    echo "File not found!"
-    exit
-fi
-echo "[x] checking for elasticsearch.key"
-if [ ! -f ./certs/elasticsearch.key ]; then
-    echo -e "\e[31m[X]\e[0m File not found!"
-    exit
-fi
-echo "[x] checking for elasticsearch.crt"
-if [ ! -f ./certs/elasticsearch.crt ]; then
-    echo -e "\e[31m[X]\e[0m File not found!"
-    exit
-fi
-echo "[x] checking for logstash.crt"
-if [ ! -f ./certs/logstash.crt ]; then
-    echo -e "\e[31m[X]\e[0m File not found!"
-    exit
-fi
-echo "[x] checking for logstash.key"
-if [ ! -f ./certs/logstash.key ]; then
-    echo -e "\e[31m[X]\e[0m File not found!"
-    exit
-fi
+def data_retention():
+    usage = shutil.disk_usage("/")
+    #needs choice of path
+    # Ubuntu: /var/lib/docker/
+    # Fedora: /var/lib/docker/
+    # Debian: /var/lib/docker/
+    # Windows: C:\ProgramData\DockerDesktop
+    # MacOS: ~/Library/Containers/com.docker.docker/Data/vms/0/
+    free_space = formatSize(usage[2])
+    print(free_space)
+    fs = free_space.strip("G")
+    #seventyfive = float(fs)*0.75
+    #days = seventyfive / 7.5
+    # 75% of the available diskspace, divided by 7.5G per day allowance = free_space /10
+    #print('%.1f'%seventyfive + "G")
+    days = float(fs) / 10
+    print('%.0f'%days + " Days")
 
-
-else
-echo "Not a valid option"
-fi
-
-installdocker
-initdockerswarm
-populatecerts
-generatepasswords
-customlogstashconf
-populatelogstashconfig
-configuredocker
-deploylme
-setpasswords
-configelasticsearch
-zipfiles
-
-read -e -p "Do you want to automatically update LME ([y]es/[n]o): " -i "y" autoupdate_enabled
-
-if [ "$autoupdate_enabled" == "y" ]; then
-echo -e "\e[32m[x]\e[0m Enabling LME Automatic Update"
-#cron lme update
-auto_lme_update
-fi
-
-read -e -p "Do you want to automatically update Dashboards ([y]es/[n]o): " -i "y" dashboardupdate_enabled
-
-if [ "$dashboardupdate_enabled" == "y" ]; then
-echo -e "\e[32m[x]\e[0m Enabling Dashboard Automatic Update"
-#cron dash update
-dashboard_update
-fi
-
-#ILM
-data_retention
-
-#pipelines
-pipelines
-
-echo "##################################################################################"
-echo "## KIBANA/Elasticsearch Credentials are (these will not be accesible again!!!!) ##"
-echo "##"
-echo "## Web Interface login:"
-echo "## elastic:$elastic_user_pass"
-echo "##"
-echo "## System Credentials"
-echo "## kibana_system_pass:$kibana_system_pass"
-echo "## logstash_system:$logstash_system_pass"
-echo "## logstash_writer:$logstash_writer"
-echo "## update_user:$update_user_pass"
-echo "##################################################################################"
-}
+install()
