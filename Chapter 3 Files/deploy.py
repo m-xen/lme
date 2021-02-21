@@ -33,7 +33,7 @@ def install():
     while not IP_Fin:
         try:
             S_IP = str(input("enter IP address for LME \n"))
-            result = socket.gethostbyaddr(S_IP)
+            socket.gethostbyaddr(S_IP)
         except:
             print("that IP didn't respond, please enter a valid IP address")
         else:
