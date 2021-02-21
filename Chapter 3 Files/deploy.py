@@ -12,6 +12,7 @@
 
 import os
 import shutil
+import socket
 
 def install():
     if os.path.isfile("docker-compose-stack.yml"):
@@ -28,7 +29,18 @@ def install():
 
 
     #find the IP and Server DNS name
-    S_IP = input("enter IP address for LME")
+    IP_Fin = False
+    while not IP_Fin:
+        try:
+            S_IP = str(input("enter IP address for LME \n"))
+            result = socket.gethostbyaddr(S_IP)
+        except:
+            print("that IP didn't respond, please enter a valid IP address")
+        else:
+            print(S_IP + " connection tested\n")
+            IP_Fin = True
+
+
     S_Name = input("enter the DNS name of LME")
 
     SelfS = input("This script will use self signed certificates for communication and encryption, Do you want to continue with self signed certificates? Y or N")
