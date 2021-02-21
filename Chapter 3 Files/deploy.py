@@ -36,7 +36,6 @@ def install():
             exit()
     shutil.copy("docker-compose-stack.yml","docker-compose-stack-live.yml")
 
-
     #get the IP and Server DNS name
     S_IP = str(input("enter IP address for LME \n"))
     S_Name = str(input("enter the DNS name for LME \n"))
