@@ -11,14 +11,13 @@
 # zipfiles
 
 import os
+import re
 import shutil
 import socket
 import time
 
 def install():
-    if os.path.isfile("docker-compose-stack.yml"):
-        print("OK")
-    else:
+    if not os.path.isfile("docker-compose-stack.yml"):
         print("Can't find docker-compose-stack.yml please change directory to Chapter 3 Files and rerun this script")
         exit()
 
@@ -39,31 +38,44 @@ def install():
 
 
     #get the IP and Server DNS name
+    S_IP = str(input("enter IP address for LME \n"))
+    S_Name = str(input("enter the DNS name for LME \n"))
+    regex = ("^((?!-)[A-Za-z0-9-]" + "{1,63}(?<!-)\\.)" + "+[A-Za-z]{2,6}")
+    Pattern = re.compile(regex)
+    while not re.fullmatch(Pattern, S_Name):
+        try:
+            print("that server name isn't a valid dns name, please enter a name like \"test.local\"")
+            S_Name = str(input("enter a valid DNS name for LME \n"))
+        except KeyboardInterrupt:
+            exit()
+    print("Testing...\n")
+
     IP_Fin = False
+    Sname_Fin = False
+
     while not IP_Fin:
         try:
-            S_IP = str(input("enter IP address for LME \n"))
             socket.gethostbyaddr(S_IP)
         except KeyboardInterrupt:
             exit()
         except:
             print("that IP didn't respond, please enter a valid IP address")
+            S_IP = str(input("enter a valid IP address for LME \n"))
         else:
-            print(S_IP + " connection tested\n")
             IP_Fin = True
 
-    Sname_Fin = False
     while not Sname_Fin:
         try:
-            S_Name = input("enter the DNS name of LME \n")
             socket.gethostbyname(S_Name)
         except KeyboardInterrupt:
             exit()
         except:
             print("that server name didn't respond, please enter a valid name")
+            S_Name = str(input("enter a valid DNS name for LME \n"))
         else:
-            print(S_Name + " connection tested\n")
             Sname_Fin = True
+    
+    print("Success! Configuring LME with IP address \"" + S_IP + "\" and server name \"" + S_Name + "\"\n")
 
     SelfS = input("This script will use self signed certificates for communication and encryption, Do you want to continue with self signed certificates? Y or N")
 
