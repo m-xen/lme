@@ -13,22 +13,32 @@
 import os
 import shutil
 import socket
+import time
 
 def install():
     if os.path.isfile("docker-compose-stack.yml"):
         print("OK")
     else:
-        print("please change directory to Chapter 3 Files and rerun")
+        print("Can't find docker-compose-stack.yml please change directory to Chapter 3 Files and rerun this script")
         exit()
 
     #move configs
     if os.path.isfile("docker-compose-stack-live.yml"):
-        os.rename("docker-compose-stack-live.yml","docker-compose-stack-live.yml.bak")
-    else:
-        shutil.copy("docker-compose-stack.yml","docker-compose-stack-live.yml")
+        try:
+            if os.path.isfile("docker-compose-stack-live.yml.bak"):
+                try:
+                    os.remove("docker-compose-stack-live.yml.bak")
+                except OSError as error:
+                    print(error)
+                    exit()
+            os.rename("docker-compose-stack-live.yml","docker-compose-stack-live.yml.bak")
+        except OSError as error:
+            print(error)
+            exit()
+    shutil.copy("docker-compose-stack.yml","docker-compose-stack-live.yml")
 
 
-    #find the IP and Server DNS name
+    #get the IP and Server DNS name
     IP_Fin = False
     while not IP_Fin:
         try:
@@ -52,13 +62,13 @@ def install():
         except:
             print("that server name didn't respond, please enter a valid name")
         else:
-            print(S_IP + " connection tested\n")
+            print(S_Name + " connection tested\n")
             Sname_Fin = True
 
     SelfS = input("This script will use self signed certificates for communication and encryption, Do you want to continue with self signed certificates? Y or N")
 
     if SelfS in ["Y","y","Yes","yes","YES"]:
-        print("OK")
+        generate_certs()
     else:
         Certs = input("Please create certificates and put them in the /certs folder. The press Y to continue or N to quit the install")
         if Certs in ["Y","y","Yes","yes","YES"]:
@@ -69,6 +79,23 @@ def install():
         else:
             exit()
     data_retention()
+
+def generate_certs():
+    
+    try:
+        print("\n ...about to remove certs folder, ctrl-c if you're not sure... \n")
+        time.sleep(3)
+        parent_dir = os.getcwd()
+        directory = "certs"
+        path = os.path.join(parent_dir, directory)
+        shutil.rmtree(path)
+        os.mkdir(path, 0o666)
+        exit()
+    except KeyboardInterrupt:
+        exit()
+    except OSError as error:
+        print(error)
+        exit()
 
 def formatSize(bytes):
     try:

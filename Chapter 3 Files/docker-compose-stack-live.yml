@@ -1,0 +1,128 @@
+version: '3.3'
+##########################
+# LME Stack deploy file  #
+# Version 0.3 - 30/06/19 #
+##########################
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.8.0
+    environment:
+      - node.name=es01
+      - discovery.seed_hosts=es01
+      - cluster.initial_master_nodes=es01
+      - ELASTIC_PASSWORD=temp
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=/usr/share/elasticsearch/config/certificates/elasticsearch.key
+      - xpack.security.http.ssl.certificate_authorities=/usr/share/elasticsearch/config/certificates/ca.crt
+      - xpack.security.http.ssl.certificate=/usr/share/elasticsearch/config/certificates/elasticsearch.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certificates/ca.crt
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certificates/elasticsearch.crt
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certificates/elasticsearch.key
+      - xpack.monitoring.enabled=false
+      - cluster.name=loggingmadeeasy-es
+      - path.repo=/usr/share/elasticsearch/data,/usr/share/elasticsearch/backups
+        #      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xmsram-countg -Xmxram-countg"
+    command: /bin/bash -c "cp -r /run/secrets /usr/share/elasticsearch/config/certificates && /usr/local/bin/docker-entrypoint.sh eswrapper"
+    volumes:
+      - type: volume
+        source: esdata
+        target: /usr/share/elasticsearch/data
+      - type: bind
+        source: /opt/lme/backups
+        target: /usr/share/elasticsearch/backups
+    networks:
+      - esnet
+    ports:
+      - 9200:9200
+    secrets:
+      - ca.crt
+      - elasticsearch.crt
+      - elasticsearch.key
+#    healthcheck:
+#      test: curl -k https://localhost:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5  
+
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.8.0
+    environment:
+      SERVER_NAME: kibana
+      ELASTICSEARCH_HOSTS: https://elasticsearch:9200
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: /usr/share/kibana/certificates/ca.crt
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY: /usr/share/kibana/certificates/kibana.key
+      SERVER_SSL_CERTIFICATE: /usr/share/kibana/certificates/kibana.crt
+      ELASTICSEARCH_USERNAME: kibana
+      ELASTICSEARCH_PASSWORD: insertkibanapasswordhere
+      XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: kibanakey
+    command: /bin/bash -c "cp -r /run/secrets /usr/share/kibana/certificates && /usr/local/bin/kibana-docker"
+    secrets:
+      - ca.crt
+      - kibana.crt
+      - kibana.key
+    networks:
+      - esnet
+    ports:
+      - 443:5601
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.8.0
+    environment:
+      XPACK_MONITORING_ENABLED: "false"
+    ports:
+      - 5044:5044
+      - 12514:12514
+    networks:
+      - esnet
+    configs:
+      - source: logstash.conf
+        target: /usr/share/logstash/pipeline/logstash.conf
+        mode: 0444
+      - source: osmap.csv
+        target: /tmp/osmap.csv
+        mode: 0444
+      - source: logstash_custom.conf
+        target: /usr/share/logstash/pipeline/logstash_custom.conf
+        mode: 0444 
+    secrets:
+      - ca.crt
+      - logstash.crt
+      - logstash.key
+
+
+secrets:
+  ca.crt:
+    external: true
+  logstash.crt:
+    external: true
+  logstash.key:
+    external: true
+  elasticsearch.crt:
+    external: true
+  elasticsearch.key:
+    external: true
+  kibana.crt:
+    external: true
+  kibana.key:
+    external: true
+configs:
+  logstash.conf:
+    external: true
+  osmap.csv:
+    external: true
+  logstash_custom.conf:
+    external: true
+volumes:
+  esdata:
+    driver: local
+
+networks:
+  esnet:
+    driver: overlay
