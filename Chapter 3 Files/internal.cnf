@@ -1,0 +1,7 @@
+[server]
+authorityKeyIdentifier=keyid,issuer 
+basicConstraints = critical,CA:FALSE 
+extendedKeyUsage=serverAuth 
+keyUsage = critical, digitalSignature, keyEncipherment 
+subjectAltName = DNS:localhost, IP:127.0.0.1, DNS:es01, DNS:es02, DNS:es03, DNS:logstash 
+subjectKeyIdentifier=hash

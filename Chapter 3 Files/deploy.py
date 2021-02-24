@@ -1,19 +1,19 @@
-# installdocker
-# initdockerswarm
-# populatecerts
-# generatepasswords
-# customlogstashconf
-# populatelogstashconfig
-# configuredocker
-# deploylme
-# setpasswords
-# configelasticsearch
-# zipfiles
+#docker pull docker.elastic.co/elasticsearch/elasticsearch:7.11.1-amd64
+#docker pull docker.elastic.co/kibana/kibana:7.11.1
+#docker pull docker.elastic.co/logstash/logstash:7.11.1-amd64
+
+
+#docker-compose -f elastic-docker-tls.yml up -d
+#docker exec es01 /bin/bash -c "bin/elasticsearch-setup-passwords \
+#auto --batch --url https://es01:9200"
+#docker-compse stop
+#docker-compose -f elastic-docker-tls.yml up -d
 
 import os
 import re
 import shutil
 import socket
+import subprocess
 import time
 
 def install():
@@ -37,14 +37,14 @@ def install():
     shutil.copy("docker-compose-stack.yml","docker-compose-stack-live.yml")
 
     #get the IP and Server DNS name
-    S_IP = str(input("enter IP address for LME \n"))
-    S_Name = str(input("enter the DNS name for LME \n"))
+    install.S_IP = str(input("enter IP address for LME \n"))
+    install.S_Name = str(input("enter the DNS name for LME \n"))
     regex = ("^((?!-)[A-Za-z0-9-]" + "{1,63}(?<!-)\\.)" + "+[A-Za-z]{2,6}")
     Pattern = re.compile(regex)
-    while not re.fullmatch(Pattern, S_Name):
+    while not re.fullmatch(Pattern, install.S_Name):
         try:
             print("that server name isn't a valid dns name, please enter a name like \"test.local\"")
-            S_Name = str(input("enter a valid DNS name for LME \n"))
+            install.S_Name = str(input("enter a valid DNS name for LME \n"))
         except KeyboardInterrupt:
             exit()
     print("Testing...\n")
@@ -54,59 +54,94 @@ def install():
 
     while not IP_Fin:
         try:
-            socket.gethostbyaddr(S_IP)
+            socket.gethostbyaddr(install.S_IP)
         except KeyboardInterrupt:
             exit()
         except:
             print("that IP didn't respond, please enter a valid IP address")
-            S_IP = str(input("enter a valid IP address for LME \n"))
+            install.S_IP = str(input("enter a valid IP address for LME \n"))
         else:
             IP_Fin = True
 
     while not Sname_Fin:
         try:
-            socket.gethostbyname(S_Name)
+            socket.gethostbyname(install.S_Name)
         except KeyboardInterrupt:
             exit()
         except:
             print("that server name didn't respond, please enter a valid name")
-            S_Name = str(input("enter a valid DNS name for LME \n"))
+            install.S_Name = str(input("enter a valid DNS name for LME \n"))
         else:
             Sname_Fin = True
     
-    print("Success! Configuring LME with IP address \"" + S_IP + "\" and server name \"" + S_Name + "\"\n")
+    print("Success! Configuring LME with IP address \"" + install.S_IP + "\" and server name \"" + install.S_Name + "\"\n")
+    
 
-    SelfS = input("This script will use self signed certificates for communication and encryption, Do you want to continue with self signed certificates? Y or N")
+    generate_certs()
 
-    if SelfS in ["Y","y","Yes","yes","YES"]:
-        generate_certs()
-    else:
-        Certs = input("Please create certificates and put them in the /certs folder. The press Y to continue or N to quit the install")
-        if Certs in ["Y","y","Yes","yes","YES"]:
-            if os.path.isdir("Certs"):
-                print("OK")
-            else:
-                exit()
-        else:
-            exit()
-    data_retention()
+    #bring up the environment to configure
+    #subprocess.check_call(r'"docker-compose" -f elastic-docker-tls.yml up -d', stderr=subprocess.STDOUT, shell=True)
+    #copy cert into kibana
+    #subprocess.check_call(r'"docker" cp root-ca.key es01:/usr/share/elasticsearch/config/certificates', stderr=subprocess.STDOUT, shell=True)
+
+    configure()
 
 def generate_certs():
-    
+
+    #manually generate certificate for Kibana
     try:
-        print("\n ...about to remove certs folder, ctrl-c if you're not sure... \n")
-        time.sleep(3)
         parent_dir = os.getcwd()
         directory = "certs"
         path = os.path.join(parent_dir, directory)
-        shutil.rmtree(path)
-        os.mkdir(path, 0o666)
-        exit()
+        if os.path.isdir("certs"):
+            print("\n ...about to remove certs folder, ctrl-c if you're not sure... \n")
+            time.sleep(3)
+            shutil.rmtree(path)
+        os.mkdir(path, 0o755)
     except KeyboardInterrupt:
         exit()
     except OSError as error:
         print(error)
         exit()
+    #create CA private key
+    subprocess.check_call(r'"openssl" genrsa -out certs/root-ca.key 4096', stderr=subprocess.STDOUT, shell=True)
+    #create a csr
+    subprocess.check_call(r'"openssl" req -new -key certs/root-ca.key -out certs/root-ca.csr -sha256 -subj "/C=GB/ST=UK/L=London/O=Docker/CN=Elastic"', stderr=subprocess.STDOUT, shell=True)
+    #sign the root cert
+    subprocess.check_call(r'"openssl" x509 -req  -days 3650  -in certs/root-ca.csr -signkey certs/root-ca.key -sha256 -out certs/root-ca.crt -extfile root-ca.cnf -extensions root_ca', stderr=subprocess.STDOUT, shell=True)
+    #create server certificate
+    subprocess.check_call(r'"openssl" genrsa -out certs/kibana.key 4096', stderr=subprocess.STDOUT, shell=True)
+    #create a csr
+    subprocess.check_call(r'"openssl" req -new -key certs/kibana.key -out certs/kibana.csr -sha256 -subj "/C=GB/ST=UK/L=London/O=Docker/CN=LME"', stderr=subprocess.STDOUT, shell=True)
+    
+    with open('kibana.cnf', 'w') as file:
+        file.write("[server]\n"
+        "authorityKeyIdentifier=keyid,issuer \n"
+        "basicConstraints = critical,CA:FALSE \n"
+        "extendedKeyUsage=serverAuth \n"
+        "keyUsage = critical, digitalSignature, keyEncipherment \n"
+        "subjectAltName = DNS:"+ install.S_Name +", IP:" + install.S_IP + ", DNS:kibana\n"
+        "subjectKeyIdentifier=hash")
+
+    subprocess.check_call(r'"openssl" x509 -req -days 750 -in certs/kibana.csr -sha256 -CA certs/root-ca.crt -CAkey certs/root-ca.key -CAcreateserial -out certs/kibana.crt -extfile kibana.cnf -extensions server', stderr=subprocess.STDOUT, shell=True)
+
+    with open('internal.cnf', 'w') as file:
+        file.write("[server]\n"
+        "authorityKeyIdentifier=keyid,issuer \n"
+        "basicConstraints = critical,CA:FALSE \n"
+        "extendedKeyUsage=serverAuth \n"
+        "keyUsage = critical, digitalSignature, keyEncipherment \n"
+        "subjectAltName = DNS:localhost, IP:127.0.0.1, DNS:es01, DNS:es02, DNS:es03, DNS:logstash \n"
+        "subjectKeyIdentifier=hash")
+   
+    #create internal private key
+    subprocess.check_call(r'"openssl" genrsa -out certs/internal.key 4096', stderr=subprocess.STDOUT, shell=True)
+    #create a csr
+    subprocess.check_call(r'"openssl" req -new -key certs/internal.key -out certs/internal.csr -sha256 -subj "/C=GB/ST=UK/L=London/O=Docker/CN=ELK"', stderr=subprocess.STDOUT, shell=True)
+    #create internal certificate
+    subprocess.check_call(r'"openssl" x509 -req -days 750 -in certs/internal.csr -sha256 -CA certs/root-ca.crt -CAkey certs/root-ca.key -CAcreateserial -out certs/internal.crt -extfile internal.cnf -extensions server', stderr=subprocess.STDOUT, shell=True)
+
+    exit()
 
 def formatSize(bytes):
     try:
@@ -125,7 +160,7 @@ def formatSize(bytes):
     else:
         return "%.2fkb" % (kb)
 
-def data_retention():
+def configure():
     usage = shutil.disk_usage("/")
     #needs choice of path
     # Ubuntu: /var/lib/docker/
@@ -144,3 +179,5 @@ def data_retention():
     print('%.0f'%days + " Days")
 
 install()
+print("\n An deireadh! \n")
+exit()
