@@ -107,6 +107,13 @@ def generate_certs():
     subprocess.check_call(r'"openssl" genrsa -out certs/root-ca.key 4096', stderr=subprocess.STDOUT, shell=True)
     #create a csr
     subprocess.check_call(r'"openssl" req -new -key certs/root-ca.key -out certs/root-ca.csr -sha256 -subj "/C=GB/ST=UK/L=London/O=Docker/CN=Elastic"', stderr=subprocess.STDOUT, shell=True)
+    
+    with open('root.cnf', 'w') as file:
+        file.write("[root_ca]\n"
+        "basicConstraints = critical,CA:TRUE,pathlen:1 \n"
+        "keyUsage = critical, nonRepudiation, cRLSign, keyCertSign \n"
+        "subjectKeyIdentifier=hash")
+        
     #sign the root cert
     subprocess.check_call(r'"openssl" x509 -req  -days 3650  -in certs/root-ca.csr -signkey certs/root-ca.key -sha256 -out certs/root-ca.crt -extfile root-ca.cnf -extensions root_ca', stderr=subprocess.STDOUT, shell=True)
     #create server certificate
