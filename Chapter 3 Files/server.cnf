@@ -1,7 +1,0 @@
-[server]
-authorityKeyIdentifier=keyid,issuer 
-basicConstraints = critical,CA:FALSE 
-extendedKeyUsage=serverAuth 
-keyUsage = critical, digitalSignature, keyEncipherment 
-subjectAltName = DNS:mbp.local, IP:1.1.1.1
-subjectKeyIdentifier=hash
