@@ -82,7 +82,7 @@ def install():
     #bring up the environment to configure
     #subprocess.check_call(r'"docker-compose" -f elastic-docker-tls.yml up -d', stderr=subprocess.STDOUT, shell=True)
     #copy cert into kibana
-    #subprocess.check_call(r'"docker" cp root-ca.key es01:/usr/share/elasticsearch/config/certificates', stderr=subprocess.STDOUT, shell=True)
+    #subprocess.check_call(r'"docker" cp root.key es01:/usr/share/elasticsearch/config/certificates', stderr=subprocess.STDOUT, shell=True)
 
     configure()
 
@@ -104,18 +104,18 @@ def generate_certs():
         print(error)
         exit()
     #create CA private key
-    subprocess.check_call(r'"openssl" genrsa -out certs/root-ca.key 4096', stderr=subprocess.STDOUT, shell=True)
+    subprocess.check_call(r'"openssl" genrsa -out certs/root.key 4096', stderr=subprocess.STDOUT, shell=True)
     #create a csr
-    subprocess.check_call(r'"openssl" req -new -key certs/root-ca.key -out certs/root-ca.csr -sha256 -subj "/C=GB/ST=UK/L=London/O=Docker/CN=Elastic"', stderr=subprocess.STDOUT, shell=True)
+    subprocess.check_call(r'"openssl" req -new -key certs/root.key -out certs/root.csr -sha256 -subj "/C=GB/ST=UK/L=London/O=Docker/CN=Elastic"', stderr=subprocess.STDOUT, shell=True)
     
     with open('root.cnf', 'w') as file:
         file.write("[root_ca]\n"
         "basicConstraints = critical,CA:TRUE,pathlen:1 \n"
         "keyUsage = critical, nonRepudiation, cRLSign, keyCertSign \n"
         "subjectKeyIdentifier=hash")
-        
+
     #sign the root cert
-    subprocess.check_call(r'"openssl" x509 -req  -days 3650  -in certs/root-ca.csr -signkey certs/root-ca.key -sha256 -out certs/root-ca.crt -extfile root-ca.cnf -extensions root_ca', stderr=subprocess.STDOUT, shell=True)
+    subprocess.check_call(r'"openssl" x509 -req  -days 3650  -in certs/root.csr -signkey certs/root.key -sha256 -out certs/root.crt -extfile root.cnf -extensions root_ca', stderr=subprocess.STDOUT, shell=True)
     #create server certificate
     subprocess.check_call(r'"openssl" genrsa -out certs/kibana.key 4096', stderr=subprocess.STDOUT, shell=True)
     #create a csr
@@ -130,7 +130,7 @@ def generate_certs():
         "subjectAltName = DNS:"+ install.S_Name +", IP:" + install.S_IP + ", DNS:kibana\n"
         "subjectKeyIdentifier=hash")
 
-    subprocess.check_call(r'"openssl" x509 -req -days 750 -in certs/kibana.csr -sha256 -CA certs/root-ca.crt -CAkey certs/root-ca.key -CAcreateserial -out certs/kibana.crt -extfile kibana.cnf -extensions server', stderr=subprocess.STDOUT, shell=True)
+    subprocess.check_call(r'"openssl" x509 -req -days 750 -in certs/kibana.csr -sha256 -CA certs/root.crt -CAkey certs/root.key -CAcreateserial -out certs/kibana.crt -extfile kibana.cnf -extensions server', stderr=subprocess.STDOUT, shell=True)
 
     with open('internal.cnf', 'w') as file:
         file.write("[server]\n"
@@ -146,7 +146,7 @@ def generate_certs():
     #create a csr
     subprocess.check_call(r'"openssl" req -new -key certs/internal.key -out certs/internal.csr -sha256 -subj "/C=GB/ST=UK/L=London/O=Docker/CN=ELK"', stderr=subprocess.STDOUT, shell=True)
     #create internal certificate
-    subprocess.check_call(r'"openssl" x509 -req -days 750 -in certs/internal.csr -sha256 -CA certs/root-ca.crt -CAkey certs/root-ca.key -CAcreateserial -out certs/internal.crt -extfile internal.cnf -extensions server', stderr=subprocess.STDOUT, shell=True)
+    subprocess.check_call(r'"openssl" x509 -req -days 750 -in certs/internal.csr -sha256 -CA certs/root.crt -CAkey certs/root.key -CAcreateserial -out certs/internal.crt -extfile internal.cnf -extensions server', stderr=subprocess.STDOUT, shell=True)
 
     exit()
 
