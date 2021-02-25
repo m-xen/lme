@@ -72,36 +72,36 @@ services:
     networks:
       - elastic
 
-  es03:
-    image: docker.elastic.co/elasticsearch/elasticsearch:${VERSION}
-    container_name: es03
-    environment:
-      - node.name=es03
-      - cluster.name=es-docker-cluster
-      - discovery.seed_hosts=es01,es02
-      - cluster.initial_master_nodes=es01,es02,es03
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-      - xpack.license.self_generated.type=trial
-      - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=true
-      - xpack.security.http.ssl.key=$CERTS_DIR/internal.key
-      - xpack.security.http.ssl.certificate_authorities=$CERTS_DIR/root.crt
-      - xpack.security.http.ssl.certificate=$CERTS_DIR/internal.crt
-      - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.verification_mode=certificate
-      - xpack.security.transport.ssl.certificate_authorities=$CERTS_DIR/root.crt
-      - xpack.security.transport.ssl.certificate=$CERTS_DIR/internal.crt
-      - xpack.security.transport.ssl.key=$CERTS_DIR/internal.key
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - data03:/usr/share/elasticsearch/data
-      - certs:$CERTS_DIR
-    networks:
-      - elastic
+  #es03:
+  #  image: docker.elastic.co/elasticsearch/elasticsearch:${VERSION}
+  #  container_name: es03
+  #  environment:
+  #    - node.name=es03
+  #    - cluster.name=es-docker-cluster
+  #    - discovery.seed_hosts=es01,es02
+  #    - cluster.initial_master_nodes=es01,es02,es03
+  #    - bootstrap.memory_lock=true
+  #    - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #    - xpack.license.self_generated.type=trial
+  #    - xpack.security.enabled=true
+  #    - xpack.security.http.ssl.key=$CERTS_DIR/internal.key
+  #    - xpack.security.http.ssl.certificate_authorities=$CERTS_DIR/root.crt
+  #    - xpack.security.http.ssl.enabled=true
+  #    - xpack.security.http.ssl.certificate=$CERTS_DIR/internal.crt
+  #    - xpack.security.transport.ssl.enabled=true
+  #    - xpack.security.transport.ssl.verification_mode=certificate
+  #    - xpack.security.transport.ssl.certificate_authorities=$CERTS_DIR/root.crt
+  #    - xpack.security.transport.ssl.certificate=$CERTS_DIR/internal.crt
+  #    - xpack.security.transport.ssl.key=$CERTS_DIR/internal.key
+  #  ulimits:
+  #    memlock:
+  #      soft: -1
+  #      hard: -1
+  #  volumes:
+  #    - data03:/usr/share/elasticsearch/data
+  #    - certs:$CERTS_DIR
+  #  networks:
+  #    - elastic
   
   kib01:
     image: docker.elastic.co/kibana/kibana:${VERSION}

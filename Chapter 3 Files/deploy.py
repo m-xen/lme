@@ -112,7 +112,7 @@ def generate_certs():
         file.write("[server]\n"
         "authorityKeyIdentifier=keyid,issuer \n"
         "basicConstraints = critical,CA:FALSE \n"
-        "extendedKeyUsage=serverAuth \n"
+        "extendedKeyUsage=serverAuth, clientAuth \n"
         "keyUsage = critical, digitalSignature, keyEncipherment \n"
         "subjectAltName = DNS:"+ install.S_Name +", IP:" + install.S_IP + ", DNS:kibana\n"
         "subjectKeyIdentifier=hash")
@@ -123,7 +123,7 @@ def generate_certs():
         file.write("[server]\n"
         "authorityKeyIdentifier=keyid,issuer \n"
         "basicConstraints = critical,CA:FALSE \n"
-        "extendedKeyUsage=serverAuth \n"
+        "extendedKeyUsage=serverAuth, clientAuth \n"
         "keyUsage = critical, digitalSignature, keyEncipherment \n"
         "subjectAltName = DNS:localhost, IP:127.0.0.1, DNS:es01, DNS:es02, DNS:es03, DNS:logstash \n"
         "subjectKeyIdentifier=hash")
@@ -177,7 +177,8 @@ def up():
     subprocess.check_call(r'"docker" stop gen_certs', stderr=subprocess.STDOUT, shell=True)
     print("Bringing up environment now...")
     subprocess.check_call(r'"docker-compose" -f docker-compose-stack-live.yml up -d', stderr=subprocess.STDOUT, shell=True)
+    subprocess.check_call(r'"docker" exec es01 /bin/bash -c "bin/elasticsearch-setup-passwords auto --batch --url https://es01:9200"', stderr=subprocess.STDOUT, shell=True)
 
 install()
-print("\n An deireadh! \n")
+print("\n Finished! \n")
 exit()
