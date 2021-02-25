@@ -2,13 +2,6 @@
 #docker pull docker.elastic.co/kibana/kibana:7.11.1
 #docker pull docker.elastic.co/logstash/logstash:7.11.1-amd64
 
-
-#docker-compose -f elastic-docker-tls.yml up -d
-#docker exec es01 /bin/bash -c "bin/elasticsearch-setup-passwords \
-#auto --batch --url https://es01:9200"
-#docker-compse stop
-#docker-compose -f elastic-docker-tls.yml up -d
-
 import os
 import re
 import shutil
@@ -76,15 +69,9 @@ def install():
     
     print("Success! Configuring LME with IP address \"" + install.S_IP + "\" and server name \"" + install.S_Name + "\"\n")
     
-
     generate_certs()
-
-    #bring up the environment to configure
-    #subprocess.check_call(r'"docker-compose" -f elastic-docker-tls.yml up -d', stderr=subprocess.STDOUT, shell=True)
-    #copy cert into kibana
-    #subprocess.check_call(r'"docker" cp root.key es01:/usr/share/elasticsearch/config/certificates', stderr=subprocess.STDOUT, shell=True)
-
     configure()
+    up()
 
 def generate_certs():
 
@@ -148,8 +135,6 @@ def generate_certs():
     #create internal certificate
     subprocess.check_call(r'"openssl" x509 -req -days 750 -in certs/internal.csr -sha256 -CA certs/root.crt -CAkey certs/root.key -CAcreateserial -out certs/internal.crt -extfile internal.cnf -extensions server', stderr=subprocess.STDOUT, shell=True)
 
-    exit()
-
 def formatSize(bytes):
     try:
         bytes = float(bytes)
@@ -184,6 +169,10 @@ def configure():
     #print('%.1f'%seventyfive + "G")
     days = float(fs) / 10
     print('%.0f'%days + " Days")
+
+def up():
+    print("Bringing up environment now...")
+    subprocess.check_call(r'"docker-compose" -f docker-compose-stack-live.yml up -d', stderr=subprocess.STDOUT, shell=True)
 
 install()
 print("\n An deireadh! \n")
