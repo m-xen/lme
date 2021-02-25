@@ -171,6 +171,10 @@ def configure():
     print('%.0f'%days + " Days")
 
 def up():
+    print("creating certs volume...")
+    subprocess.check_call(r'"docker" run -d --rm --name gen_certs -v lme_certs:/certs docker.elastic.co/elasticsearch/elasticsearch:7.11.1 tail -f /dev/null', stderr=subprocess.STDOUT, shell=True)
+    subprocess.check_call(r'"docker" cp certs/. gen_certs:/certs/', stderr=subprocess.STDOUT, shell=True)
+    subprocess.check_call(r'"docker" stop gen_certs', stderr=subprocess.STDOUT, shell=True)
     print("Bringing up environment now...")
     subprocess.check_call(r'"docker-compose" -f docker-compose-stack-live.yml up -d', stderr=subprocess.STDOUT, shell=True)
 

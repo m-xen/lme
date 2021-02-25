@@ -140,8 +140,6 @@ services:
       - source: osmap.csv
         target: /tmp/osmap.csv
         mode: 0444
-    volumes:
-      - certs:$CERTS_DIR
 
 volumes:
   data01:
